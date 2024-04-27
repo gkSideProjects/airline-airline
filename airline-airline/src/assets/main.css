@@ -1,0 +1,30 @@
+@import "./base.css";
+
+#app {
+  display: grid;
+  flex-direction: column;
+  align-items: center;
+  max-width: 100%;
+  margin: 0 auto;
+  /* padding: 2rem; */
+  font-weight: normal;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1 {
+  margin-bottom: 0;
+}
+
+time {
+  color: grey;
+}
+
+@media (hover: hover) {
+  a:hover:not(nav > a) {
+    background-color: hsla(105, 3%, 29%, 0.1);
+  }
+}
