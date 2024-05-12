@@ -7,22 +7,24 @@ import { easyMockData } from "./easyMockData.js";
 import { sortByPriceFlights } from "./util.js";
 
 import {
-  filterEasyjetFlights,
-  getEasyjetCheapestFlight,
-  getXCheapestEasyjetFlights,
-  getEasyjetLocationData,
-  filterEasyjetByCountry,
-  filterEasyjetByAirport,
+    filterEasyjetFlights,
+    getEasyjetCheapestFlight,
+    getXCheapestEasyjetFlights,
+    getEasyjetLocationData,
+    filterEasyjetByCountry,
+    filterEasyjetByAirport,
+    filterEasyjet,
 } from "./easyjetUtil.js";
 
 import {
-  filterRyanairFlights,
-  getRyanairCheapestFlight,
-  getXCheapestRyanairFlights,
-  getRyanairLocationData,
-  filterRyanairByCountry,
-  filterRyanairByAirport,
-  transformObject,
+    filterRyanairFlights,
+    getRyanairCheapestFlight,
+    getXCheapestRyanairFlights,
+    getRyanairLocationData,
+    filterRyanairByCountry,
+    filterRyanairByAirport,
+    transformObject,
+    filterRyanair,
 } from "./ryanairUtil.js";
 
 const app = express();
@@ -30,78 +32,68 @@ const port = 3000;
 
 app.use(express.json());
 
-//cors
 app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-  })
+    cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    })
 );
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+    res.send("Hello World!");
 });
 
-app.post("/getData", (req, res) => {
-  const airlines = req.body.airlines;
-  const airports = req.body.airports;
-  const days = req.body.days ? req.body.days : 50;
-  const countries = req.body.countries;
-  let combinedData = [];
+app.post("/allAirlines", (req, res) => {
+    const airlines = req.body.airlines;
+    const airports = req.body.airports;
+    const days = req.body.days ? req.body.days : 50;
+    const countries = req.body.countries;
+    let combinedData = [];
 
-  if (airlines.includes("easyjet")) {
-    let easyjet = filterEasyjetFlights(easyMockData, days);
-    easyjet = filterEasyjetByCountry(easyjet, countries);
-    easyjet = filterEasyjetByAirport(easyjet, airports);
-    const xCheapest = getXCheapestEasyjetFlights(easyjet, easyjet.length);
-    const result = getEasyjetLocationData(easyjet);
-    combinedData.push(...getLink(result, "easyjet"));
-  }
+    if (airlines.includes("easyjet")) {
+        let result = filterEasyjet(easyMockData, days, countries, airports);
+        combinedData.push(...getLink(result, "easyjet"));
+    }
 
-  if (airlines.includes("ryanair")) {
-    let ryanair = filterRyanairFlights(ryanMockData, days);
-    ryanair = filterRyanairByCountry(ryanair, countries);
-    ryanair = filterRyanairByAirport(ryanair, airports);
-    const xCheapest = getXCheapestRyanairFlights(ryanair, ryanair.length);
-    const result = getRyanairLocationData(ryanair);
-    const data = transformObject(result);
-    const link = getLink(data, "ryanair");
-    combinedData.push(...getLink(link, "ryanair"));
-  }
+    if (airlines.includes("ryanair")) {
+        let result = filterRyanair(ryanMockData, days, countries, airports);
+        combinedData.push(...getLink(result, "ryanair"));
+    }
 
-  combinedData = sortByPriceFlights(combinedData, "ASC");
+    combinedData = sortByPriceFlights(combinedData, "ASC");
 
-  res.send(combinedData);
+    res.send(combinedData);
 });
 
 app.post("/easyjet", (req, res) => {
-  // const airport = req.body.airport;
-  const days = req.body.days ? req.body.days : 50;
-  const data = filterEasyjetFlights(mockData, days);
-  const cheapest = getEasyjetCheapestFlight(data);
-  const xCheapest = getXCheapestEasyjetFlights(data, data.length);
-  const result = getEasyjetLocationData(xCheapest);
-  const final = getLink(result, "easyjet");
+    const days = req.body.days ? req.body.days : 50;
 
-  res.send(final);
+    let data = filterEasyjetFlights(easyMockData, days);
+    data = filterEasyjetByCountry(data, req.body.countries);
+    data = filterEasyjetByAirport(data, req.body.airports);
+    data = getEasyjetLocationData(data);
+    data = getLink(data, "easyjet");
 
-  // const response = fetch(`https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?departureAirport=BRS&arrivalAirport=${airport}&currency=GBP`, {});
+    res.send(data);
+
+    // const response = fetch(`https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?departureAirport=BRS&arrivalAirport=${airport}&currency=GBP`, {});
 });
 
-app.get("/ryanair", (req, res) => {
-  // const airport = req.body.airport
-  const days = req.body.days ? req.body.days : 50;
-  const data = filterRyanairFlights(mockData, days);
-  const cheapest = getRyanairCheapestFlight(data);
-  const xCheapest = getXCheapestRyanairFlights(data, data.length);
-  const result = getRyanairLocationData(xCheapest);
-  const final = getLink(result, "ryanair");
+app.post("/ryanair", (req, res) => {
+    const days = req.body.days ? req.body.days : 50;
 
-  res.send(final);
+    let data = filterRyanairFlights(ryanMockData, days);
+    data = filterRyanairByCountry(data, req.body.countries);
+    data = filterRyanairByAirport(data, req.body.airports);
+    data = getRyanairLocationData(data);
+    data = transformObject(data);
+    data = getLink(data, "ryanair");
 
-  // const response = fetch(`https://www.ryanair.com/api/farfnd/3/oneWayFares/BRS/ALC/cheapestPerDay?ToUs=AGREED&market=en-gb&outboundMonthOfDate=2024-03-01`, {});
+    res.send(data);
+
+    // const response = fetch(`https://www.ryanair.com/api/farfnd/3/oneWayFares/BRS/ALC/cheapestPerDay?ToUs=AGREED&market=en-gb&outboundMonthOfDate=2024-03-01`, {});
 });
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+    console.log(`Example app listening on port ${port}`);
 });

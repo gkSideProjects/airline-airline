@@ -7,60 +7,60 @@ const emit = defineEmits(["passSortOption"]);
 let optionSelected = ref("Price");
 
 let sortOptions = ref({
-  Price: true,
-  Date: false,
-  Airline: false,
-  DepatureAirport: false,
-  ArrivalAirport: false,
-  Country: false,
+    Price: true,
+    Date: false,
+    Airline: false,
+    DepatureAirport: false,
+    ArrivalAirport: false,
+    Country: false,
 });
 
 let sortSettings = ref({
-  ASC: true,
-  DESC: false,
+    ASC: true,
+    DESC: false,
 });
 
 watchEffect(() => {
-  emit("passSortOption", {
-    setting: sortSettings.value.ASC ? "ASC" : "DESC",
-    option: optionSelected.value,
-  });
+    emit("passSortOption", {
+        setting: sortSettings.value.ASC ? "ASC" : "DESC",
+        option: optionSelected.value,
+    });
 });
 
 function filterOption(key) {
-  if (optionSelected.value != key) {
-    sortOptions.value[key] = true;
-  }
+    if (optionSelected.value != key) {
+        sortOptions.value[key] = true;
+    }
 
-  // Clear previous value
-  if (optionSelected.value.length && optionSelected.value != key) {
-    sortOptions.value[optionSelected.value] = false;
-  }
+    // Clear previous value
+    if (optionSelected.value.length && optionSelected.value != key) {
+        sortOptions.value[optionSelected.value] = false;
+    }
 
-  optionSelected.value = key;
+    optionSelected.value = key;
 }
 
 function filterSetting(setting) {
-  if (!sortSettings.value[setting]) sortSettings.value[setting] = true;
+    if (!sortSettings.value[setting]) sortSettings.value[setting] = true;
 
-  if (setting === "ASC") {
-    sortSettings.value["DESC"] = false;
-  } else {
-    sortSettings.value["ASC"] = false;
-  }
+    if (setting === "ASC") {
+        sortSettings.value["DESC"] = false;
+    } else {
+        sortSettings.value["ASC"] = false;
+    }
 }
 </script>
 
 <template>
   <div class="sort-container">
     <div
+      v-for="(value, key) in sortOptions"
+      :key="key"
       :class="{
         sortFilter: true,
         filterSelected: sortOptions[key],
       }"
       @click="filterOption(key)"
-      v-for="(value, key) in sortOptions"
-      :key="key"
     >
       {{ addSpaces(key) }}
     </div>

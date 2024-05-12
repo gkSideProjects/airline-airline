@@ -2,86 +2,97 @@ import { locationData } from "./data.js";
 import { getMaxDate } from "./util.js";
 
 export function filterRyanairFlights(data, days) {
-  const maxDate = getMaxDate(days);
+    const maxDate = getMaxDate(days);
 
-  for (const [index, flight] of data.entries()) {
-    const currentDate = new Date(flight.outbound.departureDate);
+    for (const [index, flight] of data.entries()) {
+        const currentDate = new Date(flight.outbound.departureDate);
 
-    if (currentDate > maxDate) {
-      return data.slice(0, index);
+        if (currentDate > maxDate) {
+            return data.slice(0, index);
+        }
     }
-  }
 
-  return data;
+    return data;
 }
 
 export function filterRyanairByAirport(data, airports) {
-  const flights = data.filter((flight) => {
-    return airports.includes(flight.outbound.departureAirport.iataCode);
-  });
+    const flights = data.filter((flight) => {
+        return airports.includes(flight.outbound.departureAirport.iataCode);
+    });
 
-  return flights;
+    return flights;
 }
 
 export function filterRyanairByCountry(data, countries) {
-  const flights = data.filter((flight) => {
-    return countries.includes(flight.outbound.arrivalAirport.countryName);
-  });
+    const flights = data.filter((flight) => {
+        return countries.includes(flight.outbound.arrivalAirport.countryName);
+    });
 
-  return flights;
+    return flights;
 }
 
 export function getRyanairCheapestFlight(data) {
-  const cheapest = data.reduce(
-    (cheapest, current) =>
-      cheapest.outbound.price.value > current.outbound.price.value
-        ? current
-        : cheapest,
-    data[0]
-  );
+    const cheapest = data.reduce(
+        (cheapest, current) =>
+            cheapest.outbound.price.value > current.outbound.price.value
+                ? current
+                : cheapest,
+        data[0]
+    );
 
-  return cheapest;
+    return cheapest;
 }
 
 export function getXCheapestRyanairFlights(data, x) {
-  const cheapest = data.sort(
-    (a, b) => a.outbound.price.value - b.outbound.price.value
-  );
+    const cheapest = data.sort(
+        (a, b) => a.outbound.price.value - b.outbound.price.value
+    );
 
-  return cheapest.slice(0, x);
+    return cheapest.slice(0, x);
 }
 
 export function getRyanairLocationData(data) {
-  for (let flight of data) {
-    flight.depature = locationData[flight.outbound.departureAirport.iataCode];
-    flight.arrival = locationData[flight.outbound.arrivalAirport.iataCode];
-  }
+    for (let flight of data) {
+        flight.depature =
+            locationData[flight.outbound.departureAirport.iataCode];
+        flight.arrival = locationData[flight.outbound.arrivalAirport.iataCode];
+    }
 
-  return data;
+    return data;
 }
 
 export function transformObject(flights) {
-  let newFlights = [];
+    let newFlights = [];
 
-  flights.forEach((flight) => {
-    let newObject = {
-      arrivalAirport: flight.outbound.arrivalAirport.iataCode,
-      departureAirport: flight.outbound.departureAirport.iataCode,
-      outboundPrice: flight.outbound.price.value,
-      arrivalCountry: flight.outbound.arrivalAirport.countryName
-        .slice(0, 3)
-        .toUpperCase(),
-      departureDateTime: flight.outbound.departureDate,
-      arrivalDateTime: flight.outbound.arrivalDate,
-      depature: flight.depature,
-      arrival: flight.arrival,
-      flightNumber: flight.outbound.flightNumber,
-    };
+    flights.forEach((flight) => {
+        let newObject = {
+            arrivalAirport: flight.outbound.arrivalAirport.iataCode,
+            departureAirport: flight.outbound.departureAirport.iataCode,
+            outboundPrice: flight.outbound.price.value,
+            arrivalCountry: flight.outbound.arrivalAirport.countryName
+                .slice(0, 3)
+                .toUpperCase(),
+            departureDateTime: flight.outbound.departureDate,
+            arrivalDateTime: flight.outbound.arrivalDate,
+            depature: flight.depature,
+            arrival: flight.arrival,
+            flightNumber: flight.outbound.flightNumber,
+        };
 
-    newFlights.push(newObject);
-  });
+        newFlights.push(newObject);
+    });
 
-  return newFlights;
+    return newFlights;
+}
+
+export function filterRyanair(data, days, countries, airports) {
+    let result = filterRyanairFlights(data, days);
+    result = filterRyanairByCountry(result, countries);
+    result = filterRyanairByAirport(result, airports);
+    result = getRyanairLocationData(result);
+    result = transformObject(result);
+
+    return result;
 }
 
 /*

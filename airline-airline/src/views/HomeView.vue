@@ -1,229 +1,251 @@
 <script setup>
-import { ref, watchEffect } from "vue";
+import { onMounted, ref, watchEffect } from "vue";
 import AirlineButton from "../components/airline-button.vue";
 import AirportButton from "../components/airport-button.vue";
 import Result from "../components/flight-result.vue";
 import Slider from "../components/day-slider.vue";
-import { countries } from "../data/data.js";
+import { airlineData, airportData, countries } from "../data/data.js";
 import { addSpaces, stringSort } from "@/helper";
 import Sort from "../components/sort-flights.vue";
 
-defineEmits(["updateState", "updateDays"]);
+defineEmits(["updateAirline", "updateAirport", "updateDays"]);
 
 const API_URL = "http://localhost:3000";
 const flights = ref([]);
+const airline = ref("");
+const airport = ref("");
 const days = ref(50);
 const clearAll = ref(false);
 const selectAll = ref(true);
+const currentPage = ref(0);
+const pageCount = ref(0);
+const RESULT_COUNT = 16;
 
-const buttonStates = ref({
-  bristol: false,
-  newquay: false,
-  easyjet: false,
-  ryanair: false,
+
+const airlineStates = ref({
+    easyjet: false,
+    ryanair: false,
+});
+
+const airportStates = ref({
+    bristol: false,
+    newquay: false,
 });
 
 const countryFilters = ref({
-  Austria: true,
-  Bulgaria: true,
-  Croatia: true,
-  Cyprus: true,
-  CzechRepublic: true,
-  Egypt: true,
-  Finland: true,
-  France: true,
-  Germany: true,
-  Greece: true,
-  Iceland: true,
-  Italy: true,
-  Malta: true,
-  Morocco: true,
-  Netherlands: true,
-  Poland: true,
-  Portugal: true,
-  Spain: true,
-  Switzerland: true,
-  Tunisia: true,
-  Turkey: true,
-  UnitedKingdom: true,
+    Austria: true,
+    Bulgaria: true,
+    Croatia: true,
+    Cyprus: true,
+    CzechRepublic: true,
+    Egypt: true,
+    Finland: true,
+    France: true,
+    Germany: true,
+    Greece: true,
+    Iceland: true,
+    Italy: true,
+    Malta: true,
+    Morocco: true,
+    Netherlands: true,
+    Poland: true,
+    Portugal: true,
+    Spain: true,
+    Switzerland: true,
+    Tunisia: true,
+    Turkey: true,
+    UnitedKingdom: true,
 });
 
 watchEffect(() => {
-  const state = Object.values(countryFilters.value)[0];
+    const state = Object.values(countryFilters.value)[0];
 
-  for (const country in countryFilters.value) {
-    if (countryFilters.value[country] !== state) {
-      selectAll.value = false;
-      clearAll.value = false;
+    for (const country in countryFilters.value) {
+        if (countryFilters.value[country] !== state) {
+            selectAll.value = false;
+            clearAll.value = false;
 
-      return;
+            return;
+        }
     }
-  }
 
-  if (state) selectAll.value = state;
-  else clearAll.value = !state;
+    if (state) selectAll.value = state;
+    else clearAll.value = !state;
 });
 
 function getAirlines() {
-  let airlines = [];
+    let airlines = [];
 
-  if (buttonStates.value.easyjet) airlines.push("easyjet");
-  if (buttonStates.value.ryanair) airlines.push("ryanair");
+    for (const airline in airlineStates.value) {
+        if (airlineStates.value[airline]) airlines.push(airline);
+    }
 
-  return airlines;
+    return airlines;
 }
 
 function getAirport() {
-  let airport = [];
+    let airports = [];
 
-  if (buttonStates.value.bristol) airport.push("BRS");
-  if (buttonStates.value.newquay) airport.push("NQY");
+    for (const airport in airportStates.value) {
+        if (airportStates.value[airport]) {
+            airports.push(airportData[airport].acron);
+        }
+    }
 
-  return airport;
+    return airports;
 }
 
 function getCountries() {
-  let countries = [];
+    let countries = [];
 
-  for (const country in countryFilters.value) {
-    if (countryFilters.value[country]) {
-      countries.push(addSpaces(country));
+    for (const country in countryFilters.value) {
+        if (countryFilters.value[country]) {
+            countries.push(addSpaces(country));
+        }
     }
-  }
 
-  return countries;
+    return countries;
 }
 
 async function updateCountries() {
-  if (checkStates()) {
-    // Render data
-    await getData();
-  } else {
-    // do nothing
-  }
+    if (checkStates()) {
+        await getData();
+    } else {
+        // TODO: add notices
+    }
 }
 
 async function updateDays(data) {
-  days.value = Number(data);
-  if (checkStates()) {
-    // Render data
-    await getData();
-  } else {
-    // do nothing
-  }
+    days.value = Number(data);
+    if (checkStates()) {
+        await getData();
+    } else {
+        // TODO: add notices
+    }
 }
-
-let airportData = {
-  bristol: { name: "Bristol", key: "bristol", acron: "BRS" },
-  newquay: { name: "Newquay", key: "newquay", acron: "NQY" },
-};
-
-let airlineData = {
-  easyjet: { name: "Easyjet", key: "easyjet" },
-  ryanair: { name: "Ryanair", key: "ryanair" },
-};
 
 async function getData() {
-  // flights.value = [];
+    const data = {
+        days: days.value,
+        airlines: getAirlines(),
+        countries: getCountries(),
+        airports: getAirport(),
+    };
 
-  const data = {
-    days: days.value,
-    airlines: getAirlines(),
-    countries: getCountries(),
-    airports: getAirport(),
-  };
+    const request = {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json",
+        },
+        body: JSON.stringify(data),
+    };
 
-  const response = await fetch(`${API_URL}/getData`, {
-    method: "POST",
-    headers: {
-      "Content-type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
+    const response = await callApi(data, request);
 
-  if (response.ok) {
-    const data = await response.json();
-
-    flights.value = data;
-
-    console.log(flights);
-
-    // flights.value.forEach((flight) => {
-    //     console.log(flight.flightNumber + flight.departureDateTime);
-    // });
-  } else {
-    console.log("ERROR");
-  }
+    if (response.ok) {
+        const data = await response.json();
+        
+        flights.value = data;
+    } else {
+        console.log(response);
+        console.log("ERROR");
+    }
 }
 
-async function updateState(data) {
-  buttonStates.value[data.key] = data.value;
-  if (checkStates()) {
-    // Render data
-    await getData();
-  } else {
-    flights.value = [];
-  }
+async function callApi(data, request) {
+    if (data.airlines.length === 2)
+        return await fetch(`${API_URL}/allAirlines`, request);
+    else if (data.airlines.includes("easyjet"))
+        return await fetch(`${API_URL}/easyjet`, request);
+    else if (data.airlines.includes("ryanair")) {
+        return await fetch(`${API_URL}/ryanair`, request);
+    } 
+    
+    return {};
+}
+
+async function checks() {
+    if (checkStates()) {
+        await getData();
+    } else {
+        flights.value = [];
+    }
+}
+
+async function updateAirlineState(data) {
+    airlineStates.value[data.key] = data.value;
+    airline.value = data.value;
+
+    await checks();
+}
+
+async function updateAirportState(data) {
+    airportStates.value[data.key] = data.value;
+    airport.value = data.value;
+
+    await checks();
 }
 
 function checkStates() {
-  const airportState = buttonStates.value.bristol || buttonStates.value.newquay;
-  const airlineState = buttonStates.value.easyjet || buttonStates.value.ryanair;
+    const airportState =
+        airportStates.value.bristol || airportStates.value.newquay;
+    const airlineState =
+        airlineStates.value.easyjet || airlineStates.value.ryanair;
 
-  // console.log(`airport: ${airportState}, airline: ${airlineState}`);
-  return airportState && airlineState;
+    return airportState && airlineState;
 }
 
 function filterAll(buttonType) {
-  const state = buttonType === "SELECT" ? true : false;
+    const state = buttonType === "SELECT" ? true : false;
 
-  selectAll.value = state;
-  clearAll.value = !state;
-  changeAllState(state);
-
-  updateCountries();
+    selectAll.value = state;
+    clearAll.value = !state;
+    changeAllState(state);
+    updateCountries();
 }
 
 function changeAllState(state) {
-  for (const country in countryFilters.value) {
-    countryFilters.value[country] = state;
-  }
-}
-/*
-
-  if (country === "CLEARALL") {
-    clearAllSelected.value = !clearAllSelected.value;
-
     for (const country in countryFilters.value) {
-      countryFilters.value[country] = clearAllSelected.value;
+        countryFilters.value[country] = state;
     }
-  } else {
-*/
+}
 
 function clickButton(country) {
-  const oppositeValue = !countryFilters.value[country];
-  countryFilters.value[country] = oppositeValue;
-  updateCountries();
+    const oppositeValue = !countryFilters.value[country];
+    countryFilters.value[country] = oppositeValue;
+    updateCountries();
 }
 
 function sortData(data) {
-  console.log(sortMap[data.option]);
+    const sortedData = stringSort(flights.value, sortMap[data.option], data.setting);
 
-  for (const flight of flights.value) {
-    console.log(flight.departureAirport);
-  }
+    return;
+}
 
-  return stringSort(flights.value, sortMap[data.option], data.setting);
+function paginate(resultCount) {
+    const pagedData = [];
+
+    for (let i = 0; i < flights.value.length; i += resultCount) {
+        pagedData.push(flights.value.slice(i, i + resultCount));
+    }
+
+    pageCount.value = pagedData.length > 0 ? pagedData.length - 1 : 0;
+
+    return pagedData;
 }
 
 const sortMap = {
-  Price: "outboundPrice",
-  Date: "departureDateTime",
-  Airline: "",
-  DepatureAirport: "departureAirport",
-  ArrivalAirport: "arrivalAirport",
-  Country: "arrivalCountry",
+    Price: "outboundPrice",
+    Date: "departureDateTime",
+    Airline: "",
+    DepatureAirport: "departureAirport",
+    ArrivalAirport: "arrivalAirport",
+    Country: "arrivalCountry",
 };
+
+onMounted(() => {
+    console.log(pageCount.value);
+});
 </script>
 
 <template>
@@ -231,27 +253,31 @@ const sortMap = {
     <div class="filter-container">
       <div class="sub-main-container">
         <div class="sub-main">
-          <div class="sub-main-title">Airlines:</div>
+          <div class="sub-main-title">
+            Airlines:
+          </div>
           <AirlineButton
             airline-image="/easyjet.png"
             :airline-data="airlineData.easyjet"
-            @button-state="updateState"
+            @button-state="updateAirlineState"
           />
           <AirlineButton
             airline-image="/ryanair.png"
             :airline-data="airlineData.ryanair"
-            @button-state="updateState"
+            @button-state="updateAirlineState"
           />
         </div>
         <div class="sub-main">
-          <div class="sub-main-title">Airport:</div>
+          <div class="sub-main-title">
+            Airport:
+          </div>
           <AirportButton
             :airport-data="airportData.bristol"
-            @button-state="updateState"
+            @button-state="updateAirportState"
           />
           <AirportButton
             :airport-data="airportData.newquay"
-            @button-state="updateState"
+            @button-state="updateAirportState"
           />
         </div>
         <div class="sub-main">
@@ -296,132 +322,195 @@ const sortMap = {
         </div>
       </div>
       <div class="sort-main-container">
-        <Sort @pass-sort-option="sortData"></Sort>
+        <Sort @pass-sort-option="sortData" />
       </div>
     </div>
-    <div class="sub-main results">
-      <transition-group name="list">
-        <Result
-          v-for="(result, index) in flights"
-          :key="result.flightNumber + result.departureDateTime"
-          :position="index"
-          :data="result"
-        />
-      </transition-group>
+    <div class="results-container">
+      <div class="sub-main results">
+        <transition-group name="list">
+          <Result
+            v-for="(result, index) in paginate(RESULT_COUNT)[currentPage]"
+            :key="result.flightNumber + result.departureDateTime"
+            :position="index"
+            :data="result"
+          />
+        </transition-group>
+      </div>
+      <div :class="{pageNav: true, hidePageNav: pageCount === 0}">
+        <button @click="currentPage > 0 ? currentPage -= 1 : currentPage = 0">
+          Previous
+        </button>
+        <button>Page: {{ currentPage + 1 }}</button>
+        <button @click="currentPage < pageCount ? currentPage += 1: currentPage = pageCount">
+          Next
+        </button>
+      </div>
     </div>
   </main>
 </template>
 
 <style>
+.pageNav button {
+    padding: 1.5rem;
+    font-family: "Raleway";
+    border: 0.1rem grey solid;
+    width: 10rem;
+    font-size: 1rem;
+}
+
+.pageNav button:first-child:hover {
+    background: lightgrey;
+}
+
+.pageNav button:last-child:hover {
+    background: lightgrey;
+}
+
+.pageNav button:first-child {
+    border-radius: 1rem 0 0 1rem;
+    border-right: none;
+}
+
+.pageNav button:last-child {
+    border-radius: 0 1rem 1rem 0;
+    border-left: none;
+}
+
+.pageNav {
+    display: flex;
+    margin: 2rem;
+}
+
+.results-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.hidePageNav {
+    display: none;
+}
+
 .all-container {
-  display: flex;
-  gap: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
 }
 
 .sort-main-container {
-  width: 25rem;
-  justify-content: center;
-  padding: 1rem;
-  gap: 2rem;
-  display: flex;
-  flex-direction: column;
-  border: lightgrey 0.1rem solid;
-  border-radius: 1rem;
-  min-width: 22rem;
+    width: 25rem;
+    justify-content: center;
+    padding: 1rem;
+    gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    border: lightgrey 0.1rem solid;
+    border-radius: 1rem;
+    min-width: 22rem;
 }
 
 .countrySelected {
-  background-color: rgb(228, 228, 228);
+    background-color: rgb(228, 228, 228);
 }
 
 .countryFilter {
-  user-select: none;
-  border: solid 0.1rem lightgrey;
-  cursor: pointer;
-  padding: 0.1rem 0.5rem;
-  border-radius: 0.5rem;
+    user-select: none;
+    border: solid 0.1rem lightgrey;
+    cursor: pointer;
+    padding: 0.1rem 0.5rem;
+    border-radius: 0.5rem;
 }
 
 .country-main-container {
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
 }
 
 .location-main-container {
-  width: 25rem;
-  justify-content: center;
-  min-width: 25rem;
-  align-items: center;
-  padding: 1rem;
-  gap: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  flex-direction: row;
-  border: lightgrey 0.1rem solid;
-  border-radius: 1rem;
+    width: 25rem;
+    justify-content: center;
+    min-width: 25rem;
+    align-items: center;
+    padding: 1rem;
+    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    border: lightgrey 0.1rem solid;
+    border-radius: 1rem;
 }
 
 .filter-container {
-  padding: 0 1rem;
-  justify-content: center;
-  width: 29em;
-  display: flex;
-  gap: 2rem;
-  flex-direction: column;
+    padding: 0 1rem;
+    justify-content: center;
+    width: 29em;
+    display: flex;
+    gap: 2rem;
+    flex-direction: column;
 }
 
 .results {
-  justify-content: center;
+    justify-content: center;
 }
 
 .sub-main-title {
-  min-width: 5rem;
+    min-width: 5rem;
 }
 
 .sub-main-container {
-  width: 25rem;
-  padding: 1.5rem 1rem;
-  gap: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  border: lightgrey 0.1rem solid;
-  border-radius: 1rem;
+    width: 25rem;
+    padding: 1.5rem 1rem;
+    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    border: lightgrey 0.1rem solid;
+    border-radius: 1rem;
 }
 
-.list-move, /* apply transition to moving elements */
+.list-move {
+    transition: all 0.4s ease;
+}
+
 .list-enter-active,
-.list-leave-active {
-  transition: all 0.5s ease;
+.list-leave-active /* apply transition to moving elements */{
+    transition: all 1s ease;
 }
 
-.list-enter-from,
 .list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
+    opacity: 0;
 }
 
-/* ensure leaving items are taken out of layout flow so that moving
-   animations can be calculated correctly. */
+.list-leave-from {
+    opacity: 0;
+}
+
+.list-enter-from {
+    opacity: 0;
+}
+
+.list-enter-to {
+    opacity: 100%;
+}
+
 .list-leave-active {
-  position: absolute;
+    position: absolute;
 }
 
 main {
-  align-items: flex-start;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  margin: 1em auto;
+    align-items: flex-start;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    margin: 1em auto;
 }
 
 .sub-main {
-  flex-wrap: wrap;
-  align-items: center;
-  display: flex;
-  gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    display: flex;
+    gap: 1rem;
 }
 </style>
