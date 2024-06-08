@@ -1,6 +1,7 @@
 import { locationData, easyJetFilter } from "./data.js";
 import { getMaxDate } from "./util.js";
 
+/*
 export function filterEasyjetFlights(data, days) {
     const maxDate = getMaxDate(days);
 
@@ -64,3 +65,4 @@ export function filterEasyjet(data, days, countries, airports) {
 
     return result;
 }
+*/

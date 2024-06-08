@@ -4,28 +4,7 @@ import cors from "cors";
 import { getLink } from "./util.js";
 import { ryanMockData } from "./ryanMockData.js";
 import { easyMockData } from "./easyMockData.js";
-import { sortByPriceFlights } from "./util.js";
-
-import {
-    filterEasyjetFlights,
-    getEasyjetCheapestFlight,
-    getXCheapestEasyjetFlights,
-    getEasyjetLocationData,
-    filterEasyjetByCountry,
-    filterEasyjetByAirport,
-    filterEasyjet,
-} from "./easyjetUtil.js";
-
-import {
-    filterRyanairFlights,
-    getRyanairCheapestFlight,
-    getXCheapestRyanairFlights,
-    getRyanairLocationData,
-    filterRyanairByCountry,
-    filterRyanairByAirport,
-    transformObject,
-    filterRyanair,
-} from "./ryanairUtil.js";
+import { filterFlights, transformObject, filter, sortByPriceFlights, checkCache } from "./util.js";
 
 const app = express();
 const port = 3000;
@@ -39,61 +18,44 @@ app.use(
     })
 );
 
-app.get("/", (req, res) => {
-    res.send("Hello World!");
+app.post("/loadData", (req, res) => {
+    const { cache } = checkCache();
+
+    if (cache.size()) {
+        console.log("data already in cache")
+
+        return;
+    }
+
+    let eastjet_result = filter(easyMockData, 100, req.body.countries, ["BRS", "NQY"]);
+    let combinedData = [...getLink(eastjet_result, "easyjet")];
+    let ryanair_result = filter(ryanMockData, 100, req.body.countries, ["BRS", "NQY"]);
+
+    combinedData.push(...getLink(ryanair_result, "ryanair"));
+    combinedData = sortByPriceFlights(combinedData, "ASC");
+    
+    cache.put("all", combinedData);
 });
 
-app.post("/allAirlines", (req, res) => {
-    const airlines = req.body.airlines;
-    const airports = req.body.airports;
-    const days = req.body.days ? req.body.days : 50;
-    const countries = req.body.countries;
-    let combinedData = [];
-
-    if (airlines.includes("easyjet")) {
-        let result = filterEasyjet(easyMockData, days, countries, airports);
-        combinedData.push(...getLink(result, "easyjet"));
+app.post("/getData", (req, res) => {
+    const { cache } = checkCache();
+    
+    if (req.body.airlines.includes("easyjet")) {
+        let easyjet_result = filter(easyMockData, req.body.days, req.body.countries, req.body.airports);
+        let combinedData = [...getLink(easyjet_result, "easyjet")];
     }
 
-    if (airlines.includes("ryanair")) {
-        let result = filterRyanair(ryanMockData, days, countries, airports);
-        combinedData.push(...getLink(result, "ryanair"));
+    if (req.body.airlines.includes("easyjet")) {
+        let ryanair_result = filter(ryanMockData, req.body.days, req.body.countries, req.body.airports);
     }
 
+    combinedData.push(...getLink(ryanair_result, "ryanair"));
     combinedData = sortByPriceFlights(combinedData, "ASC");
 
+    cache.put("all", combinedData);
     res.send(combinedData);
-});
-
-app.post("/easyjet", (req, res) => {
-    const days = req.body.days ? req.body.days : 50;
-
-    let data = filterEasyjetFlights(easyMockData, days);
-    data = filterEasyjetByCountry(data, req.body.countries);
-    data = filterEasyjetByAirport(data, req.body.airports);
-    data = getEasyjetLocationData(data);
-    data = getLink(data, "easyjet");
-
-    res.send(data);
-
-    // const response = fetch(`https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?departureAirport=BRS&arrivalAirport=${airport}&currency=GBP`, {});
-});
-
-app.post("/ryanair", (req, res) => {
-    const days = req.body.days ? req.body.days : 50;
-
-    let data = filterRyanairFlights(ryanMockData, days);
-    data = filterRyanairByCountry(data, req.body.countries);
-    data = filterRyanairByAirport(data, req.body.airports);
-    data = getRyanairLocationData(data);
-    data = transformObject(data);
-    data = getLink(data, "ryanair");
-
-    res.send(data);
-
-    // const response = fetch(`https://www.ryanair.com/api/farfnd/3/oneWayFares/BRS/ALC/cheapestPerDay?ToUs=AGREED&market=en-gb&outboundMonthOfDate=2024-03-01`, {});
-});
+})
 
 app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`);
+    console.log(`airline-airline - listening on port ${port}`);
 });

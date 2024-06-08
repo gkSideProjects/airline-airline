@@ -1,3 +1,84 @@
+import cache from "memory-cache";
+import { locationData, easyJetFilter } from "./data.js";
+
+export function transformObject(flights) {
+  let newFlights = [];
+
+  flights.forEach((flight) => {
+      let newObject = {
+          arrivalAirport: flight.outbound.arrivalAirport.iataCode,
+          departureAirport: flight.outbound.departureAirport.iataCode,
+          outboundPrice: flight.outbound.price.value,
+          arrivalCountry: flight.outbound.arrivalAirport.countryName
+              .slice(0, 3)
+              .toUpperCase(),
+          departureDateTime: flight.outbound.departureDate,
+          arrivalDateTime: flight.outbound.arrivalDate,
+          depature: flight.depature,
+          arrival: flight.arrival,
+          flightNumber: flight.outbound.flightNumber,
+      };
+
+      newFlights.push(newObject);
+  });
+
+  return newFlights;
+}
+
+export function filter(data, days, countries, airports) {
+  let result = filterFlights(data, days);
+  result = filterByCountry(result, countries);
+  result = filterByAirport(result, airports);
+  result = getLocationData(result);
+
+  return result;
+}
+
+export function filterFlights(data, days) {
+  const maxDate = getMaxDate(days);
+
+  for (const [index, flight] of data.entries()) {
+      const flightDate = new Date(flight.departureDateTime);
+
+      if (flightDate > maxDate) {
+          return data.slice(0, index);
+      }
+  }
+
+  return data;
+}
+
+export function filterByCountry(data, countries) {
+  const flights = data.filter((flight) => {
+      return countries.includes(easyJetFilter[flight.arrivalCountry]);
+  });
+
+  return flights;
+}
+
+export function filterByAirport(data, airports) {
+  const flights = data.filter((flight) => {
+      return airports.includes(flight.departureAirport);
+  });
+
+  return flights;
+}
+
+export function getLocationData(data) {
+  for (let flight of data) {
+      flight.depature = locationData[flight.departureAirport];
+      flight.arrival = locationData[flight.arrivalAirport];
+  }
+
+  return data;
+}
+
+export function checkCache() {
+  const cache_size = cache.size();
+
+  return { cache, cache_size };
+}
+
 export function getLink(data, airline) {
   let link;
 

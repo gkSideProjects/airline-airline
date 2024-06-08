@@ -1,6 +1,7 @@
 import { locationData } from "./data.js";
 import { getMaxDate } from "./util.js";
 
+/*
 export function filterRyanairFlights(data, days) {
     const maxDate = getMaxDate(days);
 
@@ -30,6 +31,7 @@ export function filterRyanairByCountry(data, countries) {
 
     return flights;
 }
+
 
 export function getRyanairCheapestFlight(data) {
     const cheapest = data.reduce(
@@ -86,14 +88,17 @@ export function transformObject(flights) {
 }
 
 export function filterRyanair(data, days, countries, airports) {
-    let result = filterRyanairFlights(data, days);
-    result = filterRyanairByCountry(result, countries);
-    result = filterRyanairByAirport(result, airports);
-    result = getRyanairLocationData(result);
-    result = transformObject(result);
+    let result = transformObject(result);
+
+    // let result = filterRyanairFlights(data, days);
+    // result = filterRyanairByCountry(result, countries);
+    // result = filterRyanairByAirport(result, airports);
+    // result = getRyanairLocationData(result);
+
 
     return result;
 }
+*/
 
 /*
 		{
