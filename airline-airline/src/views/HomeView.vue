@@ -13,7 +13,6 @@ defineEmits(["updateAirline", "updateAirport", "updateDays"]);
 const API_URL = "http://localhost:3000";
 const flights = ref([]);
 const airline = ref("");
-const airport = ref("");
 const days = ref(50);
 const clearAll = ref(false);
 const selectAll = ref(true);
@@ -21,15 +20,14 @@ const currentPage = ref(0);
 const pageCount = ref(0);
 const RESULT_COUNT = 16;
 
-
 const airlineStates = ref({
     easyjet: false,
     ryanair: false,
 });
 
 const airportStates = ref({
-    bristol: false,
-    newquay: false,
+    bristol: true,
+    newquay: true,
 });
 
 const countryFilters = ref({
@@ -153,15 +151,7 @@ async function getData() {
 }
 
 async function callApi(data, request) {
-    if (data.airlines.length === 2)
-        return await fetch(`${API_URL}/allAirlines`, request);
-    else if (data.airlines.includes("easyjet"))
-        return await fetch(`${API_URL}/easyjet`, request);
-    else if (data.airlines.includes("ryanair")) {
-        return await fetch(`${API_URL}/ryanair`, request);
-    } 
-    
-    return {};
+    return await fetch(`${API_URL}/getData`, request);
 }
 
 async function checks() {
@@ -179,10 +169,7 @@ async function updateAirlineState(data) {
     await checks();
 }
 
-async function updateAirportState(data) {
-    airportStates.value[data.key] = data.value;
-    airport.value = data.value;
-
+async function updateAirportState() {
     await checks();
 }
 
@@ -216,6 +203,12 @@ function clickButton(country) {
     updateCountries();
 }
 
+function clickAirportButton(airport) {
+    const oppositeValue = !airportStates.value[airport];
+    airportStates.value[airport] = oppositeValue;
+    updateAirportState();
+}
+
 function sortData(data) {
     const sortedData = stringSort(flights.value, sortMap[data.option], data.setting);
 
@@ -243,8 +236,31 @@ const sortMap = {
     Country: "arrivalCountry",
 };
 
-onMounted(() => {
+onMounted(async () => {
     console.log(pageCount.value);
+
+    const data = {
+        countries: getCountries(),
+    };
+
+    const request = {
+        method: "POST",
+        headers: {
+            "Content-type": "application/json",
+        },
+        body: JSON.stringify(data),
+    };
+
+    const response = await fetch(`${API_URL}/loadData`, request);
+
+    if (response.ok) {
+        const data = await response.json();
+        
+        flights.value = data;
+    } else {
+        console.log(response);
+        console.log("ERROR");
+    }
 });
 </script>
 
@@ -268,20 +284,27 @@ onMounted(() => {
           />
         </div>
         <div class="sub-main">
-          <div class="sub-main-title">
-            Airport:
-          </div>
-          <AirportButton
-            :airport-data="airportData.bristol"
-            @button-state="updateAirportState"
-          />
-          <AirportButton
-            :airport-data="airportData.newquay"
-            @button-state="updateAirportState"
-          />
-        </div>
-        <div class="sub-main">
           <slider @day-state="updateDays" />
+        </div>
+      </div>
+      <div class="airport-main-container">
+        <div
+          :class="{
+            airportFilter: true,
+            airportSelected: airportStates.bristol,
+          }"
+          @click="clickAirportButton('bristol')"
+        >
+          Bristol
+        </div>
+        <div
+          :class="{
+            airportFilter: true,
+            airportSelected: airportStates.newquay,
+          }"
+          @click="clickAirportButton('newquay')"
+        >
+          Newquay
         </div>
       </div>
       <div class="location-main-container">
@@ -408,11 +431,11 @@ onMounted(() => {
     min-width: 22rem;
 }
 
-.countrySelected {
+.airportSelected, .countrySelected {
     background-color: rgb(228, 228, 228);
 }
 
-.countryFilter {
+.airportFilter, .countryFilter {
     user-select: none;
     border: solid 0.1rem lightgrey;
     cursor: pointer;
@@ -429,7 +452,7 @@ onMounted(() => {
     flex-direction: row;
 }
 
-.location-main-container {
+.airport-main-container, .location-main-container {
     width: 25rem;
     justify-content: center;
     min-width: 25rem;

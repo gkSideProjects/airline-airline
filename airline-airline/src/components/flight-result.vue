@@ -5,18 +5,18 @@ import { cleanTime } from "@/helper";
 const isSelected = ref(false);
 
 const flight = defineProps({
-  data: {
-    type: Object,
-    default: () => {},
-  },
-  position: {
-    type: Number,
-    default: 0,
-  },
+    data: {
+        type: Object,
+        default: () => {},
+    },
+    position: {
+        type: Number,
+        default: 0,
+    },
 });
 
 function clickButton() {
-  window.open(flight.data.link);
+    window.open(flight.data.link);
 }
 </script>
 
@@ -41,7 +41,7 @@ function clickButton() {
               ({{ flight.data.departureAirport }})
             </div>
           </div>
-          <img src="/arrow.svg" />
+          <img src="/arrow.svg">
           <div>
             <div class="result-text">
               {{ flight.data.arrival.city.toUpperCase() }}
