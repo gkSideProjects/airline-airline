@@ -1,4 +1,4 @@
-export let easyJetFilter = { GRC: "Greece" };
+export let easyJetFilter = { GRC: "Greece", SPA: "Spain" };
 
 export let locationData = {
     ALC: {

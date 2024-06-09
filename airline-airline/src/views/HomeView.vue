@@ -224,6 +224,8 @@ function paginate(resultCount) {
 
     pageCount.value = pagedData.length > 0 ? pagedData.length - 1 : 0;
 
+    if (currentPage.value + 1 > pageCount.value) currentPage.value = pageCount.value;
+
     return pagedData;
 }
 
@@ -363,7 +365,7 @@ onMounted(async () => {
         <button @click="currentPage > 0 ? currentPage -= 1 : currentPage = 0">
           Previous
         </button>
-        <button>Page: {{ currentPage + 1 }}</button>
+        <button>Page: {{ currentPage + 1 }} / {{ pageCount + 1 }}</button>
         <button @click="currentPage < pageCount ? currentPage += 1: currentPage = pageCount">
           Next
         </button>
@@ -405,7 +407,10 @@ onMounted(async () => {
 }
 
 .results-container {
+    justify-content: space-between;
+    min-height: 51rem;
     display: flex;
+    flex-grow: 1;
     flex-direction: column;
     align-items: center;
 }
@@ -469,13 +474,13 @@ onMounted(async () => {
 .filter-container {
     padding: 0 1rem;
     justify-content: center;
-    width: 29em;
     display: flex;
     gap: 2rem;
     flex-direction: column;
 }
 
-.results {
+.results-container .results {
+    align-items: start;
     justify-content: center;
 }
 

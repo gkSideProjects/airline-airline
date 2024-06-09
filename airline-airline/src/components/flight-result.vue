@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { cleanTime } from "@/helper";
+import { locationData } from "../data/data";
 
 const isSelected = ref(false);
 
@@ -14,6 +15,9 @@ const flight = defineProps({
         default: 0,
     },
 });
+
+const airline = flight.data.airline === "ryanair" ? "/ryanair.png" : "/easyjet.png";
+const flag = locationData[flight.data.arrivalAirport].country.toLowerCase() + "_flag.png";
 
 function clickButton() {
     window.open(flight.data.link);
@@ -31,7 +35,14 @@ function clickButton() {
       @click="clickButton()"
     >
       <div class="airport-text-container">
-        <div>{{ cleanTime(flight.data.departureDateTime) }}</div>
+        <div class="date-image-container">
+          <div class="date">
+            {{ cleanTime(flight.data.departureDateTime) }}
+          </div><img
+            class="result-image"
+            :src="airline"
+          >
+        </div>
         <div class="result-container">
           <div>
             <div class="result-text result-airport">
@@ -51,15 +62,21 @@ function clickButton() {
             </div>
           </div>
         </div>
-        <div
-          :class="{
-            flightPrice: true,
-            priceText: true,
-            chepeastFlight: position === 0,
-            normalFlight: position > 0,
-          }"
-        >
-          £{{ flight.data.outboundPrice }}
+        <div class="price-container">
+          <div
+            :class="{
+              flightPrice: true,
+              priceText: true,
+              chepeastFlight: position === 0,
+              normalFlight: position > 0,
+            }"
+          >
+            £{{ flight.data.outboundPrice }}
+          </div>
+          <img
+            class="flag"
+            :src="flag"
+          >
         </div>
       </div>
     </div>
@@ -67,6 +84,33 @@ function clickButton() {
 </template>
 
 <style scoped>
+.date {
+  background: rgb(231, 229, 229);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.5rem;
+}
+
+.price-container, .date-image-container {
+  padding: 0 1rem;
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.flag {
+  width: 3rem;
+  height: 2rem;
+  border-radius: 0.2rem;
+  align-self: end;
+}
+
+.result-image {
+  width: 3rem;
+  height: 1.7rem;
+  border-radius: 0.2rem;
+  align-self: start;
+}
+
 .result-airport {
   min-width: 3rem;
 }
@@ -92,7 +136,7 @@ function clickButton() {
 }
 
 .result-container {
-  font-size: 1.5rem;
+  font-size: 1rem;
   display: flex;
   gap: 1rem;
   align-items: center;

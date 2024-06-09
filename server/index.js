@@ -39,17 +39,21 @@ app.post("/loadData", (req, res) => {
 
 app.post("/getData", (req, res) => {
     const { cache } = checkCache();
+    let combinedData = [];
+    let easyjet_result;
+    let ryanair_result;
     
     if (req.body.airlines.includes("easyjet")) {
-        let easyjet_result = filter(easyMockData, req.body.days, req.body.countries, req.body.airports);
-        let combinedData = [...getLink(easyjet_result, "easyjet")];
+        easyjet_result = filter(easyMockData, req.body.days, req.body.countries, req.body.airports);
+        combinedData = [...getLink(easyjet_result, "easyjet")];
     }
 
-    if (req.body.airlines.includes("easyjet")) {
-        let ryanair_result = filter(ryanMockData, req.body.days, req.body.countries, req.body.airports);
+    if (req.body.airlines.includes("ryanair")) {
+
+        ryanair_result = filter(transformObject(ryanMockData), req.body.days, req.body.countries, req.body.airports);
+        combinedData.push(...getLink(ryanair_result, "ryanair"));
     }
 
-    combinedData.push(...getLink(ryanair_result, "ryanair"));
     combinedData = sortByPriceFlights(combinedData, "ASC");
 
     cache.put("all", combinedData);

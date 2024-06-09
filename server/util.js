@@ -6,6 +6,7 @@ export function transformObject(flights) {
 
   flights.forEach((flight) => {
       let newObject = {
+          airline: "ryanair",
           arrivalAirport: flight.outbound.arrivalAirport.iataCode,
           departureAirport: flight.outbound.departureAirport.iataCode,
           outboundPrice: flight.outbound.price.value,
