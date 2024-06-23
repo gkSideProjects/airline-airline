@@ -1,6 +1,60 @@
 import cache from "memory-cache";
 import { locationData, easyJetFilter } from "./data.js";
 
+export async function getEasyjetData(departure, arrival) {
+  const endpoints = [];
+  const easyjet_url = `https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?` +
+                      `departureAirport=${departure}&arrivalAirport=${arrival}&currency=GBP`;
+  try {
+    const response = await fetch(easyjet_url);
+
+    if (response.ok) {
+      const data = await response.json();
+      return data;
+    }
+
+  } catch (error) {
+    console.log(error.name, error.message);
+  }
+}
+
+export async function getRyanairData(departure, arrival) {
+  const ryanair_url = `https://www.ryanair.com/api/farfnd/3/oneWayFares?&ToUs=AGREED&arrivalAirportCategoryCode=${arrival}&
+  departureAirportIataCode=${departure}&language=en&market=en-gb&outboundDepartureDateFrom=2024-06-15&outboundDepartureDateTo=2025-06-15`;
+  
+  try {
+    const response = await fetch(ryanair_url);
+    
+    if (response.ok) {
+      const data = await response.json();
+
+      return data;
+    }
+
+  } catch (error) {
+    console.log(error.name, error.message);
+  }
+}
+
+export async function getFlightData(airlines, depature, arrival, days) {
+  let flightData = [];
+
+  if (airlines.includes("easyjet")) {
+    let easyjet_data = await getEasyjetData(depature, arrival);
+    easyjet_data = filter(easyjet_data, days);
+    flightData = [...getLink(easyjet_data, "easyjet")];
+  }
+  
+  if (airlines.includes("ryanair")) {
+    let ryanair_data = await getRyanairData(depature, arrival);
+    transformObject(ryanair_data);
+    ryanair_data = filter(ryanair_data, days);
+    flightData = [...flightData, ...getLink(ryanair_data, "ryanair")];
+  }
+
+  return flightData;
+}
+
 export function transformObject(flights) {
   let newFlights = [];
 
@@ -26,10 +80,10 @@ export function transformObject(flights) {
   return newFlights;
 }
 
-export function filter(data, days, countries, airports) {
-  let result = filterFlights(data, days);
-  result = filterByCountry(result, countries);
-  result = filterByAirport(result, airports);
+export function filter(data, days) {
+  let result = filterFlights(data, days)
+  // result = filterByCountry(result, countries);
+  // result = filterByAirport(result, airports);
   result = getLocationData(result);
 
   return result;

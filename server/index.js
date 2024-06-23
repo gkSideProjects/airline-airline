@@ -1,10 +1,10 @@
 import express from "express";
 import fetch from "fetch";
 import cors from "cors";
-import { getLink } from "./util.js";
+import { getLink, getEasyjetData } from "./util.js";
 import { ryanMockData } from "./ryanMockData.js";
 import { easyMockData } from "./easyMockData.js";
-import { filterFlights, transformObject, filter, sortByPriceFlights, checkCache } from "./util.js";
+import { getFlightData, filterFlights, transformObject, filter, sortByPriceFlights, checkCache } from "./util.js";
 
 const app = express();
 const port = 3000;
@@ -18,46 +18,35 @@ app.use(
     })
 );
 
-app.post("/loadData", (req, res) => {
+app.post("/getData", async (req, res) => {
     const { cache } = checkCache();
+    const current_cache = cache.get(req.body.code);
 
-    if (cache.size()) {
-        console.log("data already in cache")
+    if (current_cache && current_cache.days >= req.body.days) {
+        console.log("in cache");
+        res.send(current_cache);
 
         return;
     }
 
-    let eastjet_result = filter(easyMockData, 100, req.body.countries, ["BRS", "NQY"]);
-    let combinedData = [...getLink(eastjet_result, "easyjet")];
-    let ryanair_result = filter(ryanMockData, 100, req.body.countries, ["BRS", "NQY"]);
+    console.log("not in cache")
 
-    combinedData.push(...getLink(ryanair_result, "ryanair"));
-    combinedData = sortByPriceFlights(combinedData, "ASC");
-    
-    cache.put("all", combinedData);
-});
-
-app.post("/getData", (req, res) => {
-    const { cache } = checkCache();
     let combinedData = [];
     let easyjet_result;
     let ryanair_result;
     
-    if (req.body.airlines.includes("easyjet")) {
-        easyjet_result = filter(easyMockData, req.body.days, req.body.countries, req.body.airports);
-        combinedData = [...getLink(easyjet_result, "easyjet")];
-    }
+    let flight_results = await getFlightData(req.body.airlines, "BRS", req.body.code, req.body.days);
+    flight_results = sortByPriceFlights(flight_results, "ASC");
 
-    if (req.body.airlines.includes("ryanair")) {
+    const response_object = {
+        airline: req.body.airlines,
+        days: req.body.days,
+        code: req.body.code,
+        data: flight_results,
+    };
 
-        ryanair_result = filter(transformObject(ryanMockData), req.body.days, req.body.countries, req.body.airports);
-        combinedData.push(...getLink(ryanair_result, "ryanair"));
-    }
-
-    combinedData = sortByPriceFlights(combinedData, "ASC");
-
-    cache.put("all", combinedData);
-    res.send(combinedData);
+    cache.put(req.body.code, response_object);
+    res.send(response_object);
 })
 
 app.listen(port, () => {

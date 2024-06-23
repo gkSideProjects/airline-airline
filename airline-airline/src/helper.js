@@ -10,11 +10,9 @@ export function addZero(num) {
 // Return date in clean string
 export function cleanTime(time) {
     const date = new Date(time);
-    const day = addZero(date.getDate());
-    const month = addZero(date.getMonth());
-    const year = addZero(date.getFullYear());
+    const dateString = date.toUTCString().replace(":00", "");
 
-    return `${day}/${month}/${year}`;
+    return dateString;
 }
 
 // Add space to camel-case strings

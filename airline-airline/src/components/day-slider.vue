@@ -5,12 +5,11 @@ const days = ref(50);
 const emit = defineEmits(["dayState"]);
 
 function slide() {
-  emit("dayState", days.value);
+    emit("dayState", days.value);
 }
 </script>
 
 <template>
-  <p class="slider-text">Range: {{ days }}</p>
   <input
     v-model="days"
     class="slider"
@@ -19,7 +18,10 @@ function slide() {
     min="1"
     max="100"
     @change="slide"
-  />
+  >
+  <p class="slider-text">
+    Searching {{ days }} days out
+  </p>
 </template>
 
 <style>

@@ -85,9 +85,9 @@ function clickButton() {
 
 <style scoped>
 .date {
-  background: rgb(231, 229, 229);
+  background:rgb(243 243 243);
   padding: 0.2rem 0.4rem;
-  border-radius: 0.5rem;
+  border-radius: 0.2rem;
 }
 
 .price-container, .date-image-container {
@@ -99,7 +99,7 @@ function clickButton() {
 
 .flag {
   width: 3rem;
-  height: 2rem;
+  height: 1.9rem;
   border-radius: 0.2rem;
   align-self: end;
 }
@@ -108,7 +108,7 @@ function clickButton() {
   width: 3rem;
   height: 1.7rem;
   border-radius: 0.2rem;
-  align-self: start;
+  align-self: center;
 }
 
 .result-airport {
@@ -138,7 +138,7 @@ function clickButton() {
 .result-container {
   font-size: 1rem;
   display: flex;
-  gap: 1rem;
+  gap: 2rem;
   align-items: center;
 }
 
@@ -155,7 +155,7 @@ function clickButton() {
 }
 
 .airport-text-container {
-  gap: 0.5rem;
+  gap: 0.8rem;
   align-items: center;
   justify-content: center;
   flex-direction: column;
@@ -191,7 +191,7 @@ function clickButton() {
   text-align: center;
   width: inherit;
   height: inherit;
-  border: black solid 0.1rem;
+  border: lightgrey solid 0.1rem;
   font-size: 1rem;
   background-color: white;
   border-radius: 1rem;

@@ -25,18 +25,18 @@ function clickButton() {
 </script>
 
 <template>
-    <div :class="{ back: true }">
-        <img
-            draggable="false"
-            :class="{
-                airlineTextWobble: !isSelected,
-                airlineText: true,
-                airlineTextPushed: isSelected,
-            }"
-            :src="airlineImage"
-            @click="clickButton"
-        />
-    </div>
+  <div :class="{ back: true }">
+    <img
+      draggable="false"
+      :class="{
+        airlineTextWobble: !isSelected,
+        airlineText: true,
+        airlineTextPushed: isSelected,
+      }"
+      :src="airlineImage"
+      @click="clickButton"
+    >
+  </div>
 </template>
 
 <style scoped>
@@ -44,7 +44,7 @@ function clickButton() {
     display: block;
     border-radius: 1rem;
     background-color: lightgrey;
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     width: 7rem;
     height: 4rem;
 }
@@ -58,9 +58,8 @@ function clickButton() {
 }
 
 .airlineText {
-    border: black solid 0.1rem;
     width: inherit;
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     transition: transform 250ms;
 }
 

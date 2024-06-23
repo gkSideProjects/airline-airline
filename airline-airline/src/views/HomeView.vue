@@ -1,24 +1,43 @@
 <script setup>
-import { onMounted, ref, watchEffect } from "vue";
-import AirlineButton from "../components/airline-button.vue";
+import { computed, onMounted, ref, watch, watchEffect } from "vue";
 import AirportButton from "../components/airport-button.vue";
+import AirlineButton from "../components/airline-button.vue";
 import Result from "../components/flight-result.vue";
 import Slider from "../components/day-slider.vue";
-import { airlineData, airportData, countries } from "../data/data.js";
+import { airlineData, airportData, countries, cities, cityToCode } from "../data/data.js";
 import { addSpaces, stringSort } from "@/helper";
 import Sort from "../components/sort-flights.vue";
 
 defineEmits(["updateAirline", "updateAirport", "updateDays"]);
 
 const API_URL = "http://localhost:3000";
+const RESULT_COUNT = 16;
+
 const flights = ref([]);
 const airline = ref("");
 const days = ref(50);
 const clearAll = ref(false);
-const selectAll = ref(true);
 const currentPage = ref(0);
 const pageCount = ref(0);
-const RESULT_COUNT = 16;
+const currentCity = ref("");
+
+const airlineCount = computed(() => {
+    return Object.values(airlineStates.value).reduce((count, value) => count + (value ? 1 : 0), 0);
+});
+
+const airportCount = computed(() => {
+    return Object.values(airportStates.value).reduce((count, value) => count + (value ? 1 : 0), 0);
+});
+
+const cityCount = computed(() => {
+    return Object.values(cityStates.value).reduce((count, value) => count + (value ? 1 : 0), 0);
+});
+
+const currentRequest = ref({
+    airlines: [],
+    airports: [],
+    cities: []
+});
 
 const airlineStates = ref({
     easyjet: false,
@@ -30,45 +49,54 @@ const airportStates = ref({
     newquay: true,
 });
 
-const countryFilters = ref({
-    Austria: true,
-    Bulgaria: true,
-    Croatia: true,
-    Cyprus: true,
-    CzechRepublic: true,
-    Egypt: true,
-    Finland: true,
-    France: true,
-    Germany: true,
-    Greece: true,
-    Iceland: true,
-    Italy: true,
-    Malta: true,
-    Morocco: true,
-    Netherlands: true,
-    Poland: true,
-    Portugal: true,
-    Spain: true,
-    Switzerland: true,
-    Tunisia: true,
-    Turkey: true,
-    UnitedKingdom: true,
+const cityStates = ref({
+    Athens: false,
+    Corfu: false,
+    Chania: false,
+    Heraklion: false,
+    Sitia: false,
+    Kefalonia: false,
+    Kos: false,
+    Mykonos: false,
+    Preveza: false,
+    Rhodes: false,
+    Santorini: false,
+    Skiathos: false,
+    Zakynthos: false,
 });
 
-watchEffect(() => {
-    const state = Object.values(countryFilters.value)[0];
 
-    for (const country in countryFilters.value) {
-        if (countryFilters.value[country] !== state) {
-            selectAll.value = false;
-            clearAll.value = false;
-
-            return;
-        }
+watch(airlineCount, (newValue, oldValue) => {
+    if (newValue < oldValue) {
+        console.log("airline removed");
+    } else {
+        console.log("airline added");
+        checks();
     }
+}, {
+    deep: true
+});
 
-    if (state) selectAll.value = state;
-    else clearAll.value = !state;
+watch(airportCount, (newValue, oldValue) => {
+    if (newValue < oldValue) {
+        console.log("airport removed");
+    } else {
+        console.log("airport added");
+        checks();
+    }
+}, {
+    deep: true
+});
+
+watch(cityCount, (newValue, oldValue) => {
+    if (newValue < oldValue) {
+        console.log("city removed");
+    } else {
+        console.log("city added");
+        checks();
+    }
+}, {
+    deep: true
 });
 
 function getAirlines() {
@@ -93,23 +121,23 @@ function getAirport() {
     return airports;
 }
 
-function getCountries() {
-    let countries = [];
+function getCities() {
+    let cities = [];
 
-    for (const country in countryFilters.value) {
-        if (countryFilters.value[country]) {
-            countries.push(addSpaces(country));
+    for (const city in cityStates.value) {
+        if (cityStates.value[city]) {
+            cities.push(addSpaces(city));
         }
     }
 
-    return countries;
+    return cities;
 }
 
-async function updateCountries() {
+async function updateCities() {
     if (checkStates()) {
         await getData();
     } else {
-        // TODO: add notices
+        flights.value = [];
     }
 }
 
@@ -118,7 +146,7 @@ async function updateDays(data) {
     if (checkStates()) {
         await getData();
     } else {
-        // TODO: add notices
+        flights.value = [];
     }
 }
 
@@ -126,7 +154,7 @@ async function getData() {
     const data = {
         days: days.value,
         airlines: getAirlines(),
-        countries: getCountries(),
+        code: cityToCode[currentCity.value].code,
         airports: getAirport(),
     };
 
@@ -142,7 +170,6 @@ async function getData() {
 
     if (response.ok) {
         const data = await response.json();
-        
         flights.value = data;
     } else {
         console.log(response);
@@ -166,6 +193,7 @@ async function updateAirlineState(data) {
     airlineStates.value[data.key] = data.value;
     airline.value = data.value;
 
+
     await checks();
 }
 
@@ -178,29 +206,30 @@ function checkStates() {
         airportStates.value.bristol || airportStates.value.newquay;
     const airlineState =
         airlineStates.value.easyjet || airlineStates.value.ryanair;
+    const cityState = getCities();
 
-    return airportState && airlineState;
+    return airportStates.value.bristol && airlineState && cityState.length;
 }
 
 function filterAll(buttonType) {
     const state = buttonType === "SELECT" ? true : false;
 
-    selectAll.value = state;
     clearAll.value = !state;
     changeAllState(state);
-    updateCountries();
+    updateCities();
 }
 
 function changeAllState(state) {
-    for (const country in countryFilters.value) {
-        countryFilters.value[country] = state;
+    for (const city in cityStates.value) {
+        cityStates.value[city] = state;
     }
 }
 
-function clickButton(country) {
-    const oppositeValue = !countryFilters.value[country];
-    countryFilters.value[country] = oppositeValue;
-    updateCountries();
+function clickButton(city) {
+    currentCity.value = city;
+    const oppositeValue = !cityStates.value[city];
+    cityStates.value[city] = oppositeValue;
+    updateCities();
 }
 
 function clickAirportButton(airport) {
@@ -210,16 +239,16 @@ function clickAirportButton(airport) {
 }
 
 function sortData(data) {
-    const sortedData = stringSort(flights.value, sortMap[data.option], data.setting);
+    const sortedData = stringSort(flights.value.data, sortMap[data.option], data.setting);
 
     return;
 }
 
 function paginate(resultCount) {
-    const pagedData = [];
+    const pagedData = [];   
 
-    for (let i = 0; i < flights.value.length; i += resultCount) {
-        pagedData.push(flights.value.slice(i, i + resultCount));
+    for (let i = 0; i < flights.value?.data?.length; i += resultCount) {
+        pagedData.push(flights.value.data.slice(i, i + resultCount));
     }
 
     pageCount.value = pagedData.length > 0 ? pagedData.length - 1 : 0;
@@ -235,35 +264,8 @@ const sortMap = {
     Airline: "",
     DepatureAirport: "departureAirport",
     ArrivalAirport: "arrivalAirport",
-    Country: "arrivalCountry",
+    City: "arrivalCity",
 };
-
-onMounted(async () => {
-    console.log(pageCount.value);
-
-    const data = {
-        countries: getCountries(),
-    };
-
-    const request = {
-        method: "POST",
-        headers: {
-            "Content-type": "application/json",
-        },
-        body: JSON.stringify(data),
-    };
-
-    const response = await fetch(`${API_URL}/loadData`, request);
-
-    if (response.ok) {
-        const data = await response.json();
-        
-        flights.value = data;
-    } else {
-        console.log(response);
-        console.log("ERROR");
-    }
-});
 </script>
 
 <template>
@@ -271,9 +273,6 @@ onMounted(async () => {
     <div class="filter-container">
       <div class="sub-main-container">
         <div class="sub-main">
-          <div class="sub-main-title">
-            Airlines:
-          </div>
           <AirlineButton
             airline-image="/easyjet.png"
             :airline-data="airlineData.easyjet"
@@ -313,31 +312,22 @@ onMounted(async () => {
         <div class="all-container">
           <div
             :class="{
-              countryFilter: true,
-              countrySelected: selectAll,
-            }"
-            @click="filterAll('SELECT')"
-          >
-            SELECT ALL
-          </div>
-          <div
-            :class="{
-              countryFilter: true,
-              countrySelected: clearAll,
+              cityFilter: true,
+              citySelected: clearAll,
             }"
             @click="filterAll('CLEAR')"
           >
             CLEAR ALL
           </div>
         </div>
-        <div class="country-main-container">
+        <div class="city-main-container">
           <div
-            v-for="(location, index) in countries"
+            v-for="(location, index) in cities"
             :key="location"
             :ref="location"
             :class="{
-              countryFilter: true,
-              countrySelected: countryFilters[location],
+              cityFilter: true,
+              citySelected: cityStates[location],
             }"
             :position="index"
             @click="clickButton(location)"
@@ -378,17 +368,18 @@ onMounted(async () => {
 .pageNav button {
     padding: 1.5rem;
     font-family: "Raleway";
-    border: 0.1rem grey solid;
+    border: 0.1rem lightgrey solid;
     width: 10rem;
     font-size: 1rem;
+    background-color: white;
 }
 
 .pageNav button:first-child:hover {
-    background: lightgrey;
+    background: rgb(232, 232, 232);
 }
 
 .pageNav button:last-child:hover {
-    background: lightgrey;
+    background: rgb(232, 232, 232);
 }
 
 .pageNav button:first-child {
@@ -408,7 +399,7 @@ onMounted(async () => {
 
 .results-container {
     justify-content: space-between;
-    min-height: 51rem;
+    min-height: 56rem;
     display: flex;
     flex-grow: 1;
     flex-direction: column;
@@ -436,11 +427,11 @@ onMounted(async () => {
     min-width: 22rem;
 }
 
-.airportSelected, .countrySelected {
+.airportSelected, .citySelected {
     background-color: rgb(228, 228, 228);
 }
 
-.airportFilter, .countryFilter {
+.airportFilter, .cityFilter {
     user-select: none;
     border: solid 0.1rem lightgrey;
     cursor: pointer;
@@ -448,7 +439,7 @@ onMounted(async () => {
     border-radius: 0.5rem;
 }
 
-.country-main-container {
+.city-main-container {
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
@@ -473,7 +464,7 @@ onMounted(async () => {
 
 .filter-container {
     padding: 0 1rem;
-    justify-content: center;
+    justify-content: center; 
     display: flex;
     gap: 2rem;
     flex-direction: column;
@@ -489,6 +480,7 @@ onMounted(async () => {
 }
 
 .sub-main-container {
+    align-items: center;
     width: 25rem;
     padding: 1.5rem 1rem;
     gap: 1.5rem;
@@ -504,7 +496,7 @@ onMounted(async () => {
 
 .list-enter-active,
 .list-leave-active /* apply transition to moving elements */{
-    transition: all 1s ease;
+    transition: all 0.4s ease;
 }
 
 .list-leave-to {
@@ -536,6 +528,7 @@ main {
 }
 
 .sub-main {
+    justify-content: center;
     flex-wrap: wrap;
     align-items: center;
     display: flex;

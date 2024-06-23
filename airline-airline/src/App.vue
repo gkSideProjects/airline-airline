@@ -3,10 +3,15 @@ import { RouterLink, RouterView } from "vue-router";
 </script>
 
 <template>
-    <header>
-        <nav>
-            <RouterLink class="main-title" to="/">airline airline</RouterLink>
-            <svg
+  <header>
+    <nav>
+      <RouterLink
+        class="main-title"
+        to="/"
+      >
+        airline airline
+      </RouterLink>
+      <!-- <svg
                 class="logo"
                 width="220"
                 height="72"
@@ -21,10 +26,10 @@ import { RouterLink, RouterView } from "vue-router";
                     stroke-width="2"
                     stroke-linecap="round"
                 />
-            </svg>
-        </nav>
-    </header>
-    <RouterView />
+            </svg> -->
+    </nav>
+  </header>
+  <RouterView />
 </template>
 
 <style scoped>

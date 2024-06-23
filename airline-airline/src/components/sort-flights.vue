@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watchEffect } from "vue";
+import { ref, watch } from "vue";
 import { addSpaces } from "@/helper";
 
 const emit = defineEmits(["passSortOption"]);
@@ -20,7 +20,7 @@ let sortSettings = ref({
     DESC: false,
 });
 
-watchEffect(() => {
+watch([sortOptions.value, sortSettings.value], () => {
     emit("passSortOption", {
         setting: sortSettings.value.ASC ? "ASC" : "DESC",
         option: optionSelected.value,
