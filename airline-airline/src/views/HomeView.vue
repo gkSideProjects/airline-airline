@@ -229,7 +229,7 @@ function clickButton(city) {
     currentCity.value = city;
     const oppositeValue = !cityStates.value[city];
     cityStates.value[city] = oppositeValue;
-    updateCities();
+    checks();
 }
 
 function clickAirportButton(airport) {

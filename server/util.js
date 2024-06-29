@@ -1,8 +1,40 @@
 import cache from "memory-cache";
-import { locationData, easyJetFilter } from "./data.js";
+import { ryanairBistol, locationData, easyJetFilter } from "./data.js";
+
+function delay() {
+  return new Promise((resolve) => setTimeout(resolve, 500));
+}
+
+export async function getMultipleEasyjet(depatures, arrival) {
+  if (depatures.length > 2) return;
+
+  let data = [];
+
+  for (let depature of depatures) {
+      const result = await getEasyjetData(depature, arrival)
+      await delay();
+      data = [...data, ...result];
+  };
+
+  return data;
+}
+
+export async function getMultipleRyanair(depatures, arrival) {
+  if (depatures.length > 2) return;
+
+  let data = [];
+
+  depatures.forEach(async (depature) => {
+    if (!Object.values(ryanairBistol).includes(depature)) return;
+      const result = await getRyanairData(depature, arrival);
+      await delay();
+      data = [...data, ...result];
+  });
+
+  return data;
+}
 
 export async function getEasyjetData(departure, arrival) {
-  const endpoints = [];
   const easyjet_url = `https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?` +
                       `departureAirport=${departure}&arrivalAirport=${arrival}&currency=GBP`;
   try {
@@ -36,17 +68,17 @@ export async function getRyanairData(departure, arrival) {
   }
 }
 
-export async function getFlightData(airlines, depature, arrival, days) {
+export async function getFlightData(airlines, depatures, arrival, days) {
   let flightData = [];
 
   if (airlines.includes("easyjet")) {
-    let easyjet_data = await getEasyjetData(depature, arrival);
+    let easyjet_data = await getMultipleEasyjet(depatures, arrival);
     easyjet_data = filter(easyjet_data, days);
     flightData = [...getLink(easyjet_data, "easyjet")];
   }
   
   if (airlines.includes("ryanair")) {
-    let ryanair_data = await getRyanairData(depature, arrival);
+    let ryanair_data = await getMultipleRyanair(depatures, arrival);
     transformObject(ryanair_data);
     ryanair_data = filter(ryanair_data, days);
     flightData = [...flightData, ...getLink(ryanair_data, "ryanair")];
@@ -91,14 +123,17 @@ export function filter(data, days) {
 
 export function filterFlights(data, days) {
   const maxDate = getMaxDate(days);
-
   for (const [index, flight] of data.entries()) {
+      console.log(flight.departureDateTime, maxDate);
       const flightDate = new Date(flight.departureDateTime);
 
       if (flightDate > maxDate) {
+          console.log(index)
           return data.slice(0, index);
       }
   }
+
+
 
   return data;
 }
