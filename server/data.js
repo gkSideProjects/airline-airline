@@ -62,7 +62,7 @@ export let ryanairBistol = {
     BCN: "Barcelona",
     BGY: "Milan Bergamo",
     BUD: "Budapest",
-    BZG:"Bydgoszcz",
+    BZG: "Bydgoszcz",
     BZR: "Beziers Cap d'Agde",
     CGN: "Cologne",
     CPH: "Copenhagen",

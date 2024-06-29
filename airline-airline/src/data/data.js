@@ -147,6 +147,7 @@ export let airportData = {
     newquay: { name: "Newquay", key: "newquay", acron: "NQY" },
 };
 
-export let airlineData = {easyjet: { name: "Easyjet", key: "easyjet" },
+export let airlineData = {
+    easyjet: { name: "Easyjet", key: "easyjet" },
     ryanair: { name: "Ryanair", key: "ryanair" }
 };

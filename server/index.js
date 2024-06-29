@@ -2,8 +2,6 @@ import express from "express";
 import fetch from "fetch";
 import cors from "cors";
 import { getLink, getEasyjetData } from "./util.js";
-import { ryanMockData } from "./ryanMockData.js";
-import { easyMockData } from "./easyMockData.js";
 import { getMultipleEasyjet, getFlightData, filterFlights, transformObject, filter, sortByPriceFlights, checkCache } from "./util.js";
 
 const app = express();
@@ -44,7 +42,7 @@ app.post("/getData", async (req, res) => {
     let combinedData = [];
     let easyjet_result;
     let ryanair_result;
-    
+
     let flight_results = await getFlightData(req.body.airlines, req.body.airports, req.body.code, req.body.days);
     let flight_results_copy = JSON.parse(JSON.stringify(flight_results));
 
@@ -55,8 +53,6 @@ app.post("/getData", async (req, res) => {
         data: flight_results,
     };
 
-    console.log(response_object.data[0])
-
     cache.put(req.body.code, response_object);
 
     res.send({
@@ -65,8 +61,6 @@ app.post("/getData", async (req, res) => {
         code: req.body.code,
         data: sortByPriceFlights(flight_results_copy, "ASC"),
     });
-
-    console.log(response_object.data[0])
 })
 
 app.listen(port, () => {
