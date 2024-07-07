@@ -2,67 +2,73 @@ import cache from "memory-cache";
 import { ryanairBistol, locationData, easyJetFilter } from "./data.js";
 
 function delay() {
-    return new Promise((resolve) => setTimeout(resolve, 250));
+    return new Promise((resolve) => setTimeout(resolve, 150));
 }
 
-export async function getMultipleEasyjet(depatures, arrival) {
+export async function getMultipleAirline(airlines, depatures, arrival) {
     if (depatures.length > 2) return;
 
-    let data = [];
-
-    for (let [index, depature] of depatures.entries()) {
-        const result = await getEasyjetData(depature, arrival)
-        if (index !== depatures.length - 1) await delay();
-        data = [...data, ...result];
+    let result = {
+        "easyjetBRS": {},
+        "easyjetNQY": {},
+        "ryanairBRS": {},
+        "ryanairNQY": {},
     };
 
-    return data;
-}
+    for (let [index, depature] of depatures.entries()) {
+        const response = await getAirlineData(airlines, depature, arrival);
 
-export async function getMultipleRyanair(depatures, arrival) {
-    if (depatures.length > 2) return;
+        Object.keys(result).forEach((category) => {
+            if (!Object.keys(result[category]).length) result[category] = response[category];
+            else if (!result[category].hasProperty(arrival)) result[category][arrival] = response[category][arrival];
+            else result[category][arrival].data = [...result[category][arrival].data, ...response[category][arrival].data]
+        });
 
-    let data = [];
-
-    depatures.forEach(async (depature) => {
-        if (!Object.values(ryanairBistol).includes(depature)) return;
-        const result = await getRyanairData(depature, arrival);
         if (index !== depatures.length - 1) await delay();
-        data = [...data, ...result];
-    });
+    }
 
-    return data;
+    return result;
 }
 
-export async function getEasyjetData(departure, arrival) {
+export async function getAirlineData(airlines, departure, arrival) {
+    let result = {
+        "easyjetBRS": {},
+        "easyjetNQY": {},
+        "ryanairBRS": {},
+        "ryanairNQY": {},
+    };
+
     const easyjet_url = `https://www.easyjet.com/api/routepricing/v3/searchfares/GetLowestDailyFares?` +
         `departureAirport=${departure}&arrivalAirport=${arrival}&currency=GBP`;
-    try {
-        const response = await fetch(easyjet_url);
 
-        if (response.ok) {
-            const data = await response.json();
-            return data;
-        }
-
-    } catch (error) {
-        console.log(error.name, error.message);
-    }
-}
-
-export async function getRyanairData(departure, arrival) {
     const ryanair_url = `https://www.ryanair.com/api/farfnd/3/oneWayFares?&ToUs=AGREED&arrivalAirportCategoryCode=${arrival}&
   departureAirportIataCode=${departure}&language=en&market=en-gb&outboundDepartureDateFrom=2024-06-15&outboundDepartureDateTo=2025-06-15`;
 
     try {
-        const response = await fetch(ryanair_url);
+        let easy_jet_results = [];
+        let ryanair_results = [];
 
-        if (response.ok) {
-            const data = await response.json();
+        if (airlines.includes("easyjet")) {
+            easy_jet_results = await (await fetch(easyjet_url)).json();
+            easy_jet_results.forEach((flight) => flight.airline = "easyjet");
 
-            return data;
+            result["easyjet" + departure][arrival] =
+            {
+                data: easy_jet_results
+            }
+
         }
 
+        if (airlines.includes("ryanair") && Object.values(ryanairBistol).includes(departure)) {
+            ryanair_results = await (await fetch(ryanair_url)).json();
+            ryanair_results = transformObject(ryanair_results);
+            result["ryanair" + departure][arrival] =
+            {
+                data: easy_jet_results
+            }
+        }
+
+        return result;
     } catch (error) {
         console.log(error.name, error.message);
     }
@@ -70,21 +76,13 @@ export async function getRyanairData(departure, arrival) {
 
 export async function getFlightData(airlines, depatures, arrival, days) {
     let flightData = [];
+    let flight_data = await getMultipleAirline(airlines, depatures, arrival);
 
-    if (airlines.includes("easyjet")) {
-        let easyjet_data = await getMultipleEasyjet(depatures, arrival);
-        easyjet_data = filter(easyjet_data, days);
-        flightData = [...getLink(easyjet_data, "easyjet")];
-    }
+    flight_data = filterFlights(flight_data, days);
+    flight_data = getLocationData(flight_data);
+    flight_data = getLink(flight_data);
 
-    if (airlines.includes("ryanair")) {
-        let ryanair_data = await getMultipleRyanair(depatures, arrival);
-        transformObject(ryanair_data);
-        ryanair_data = filter(ryanair_data, days);
-        flightData = [...flightData, ...getLink(ryanair_data, "ryanair")];
-    }
-
-    return flightData;
+    return flight_data;
 }
 
 export function transformObject(flights) {
@@ -112,30 +110,36 @@ export function transformObject(flights) {
     return newFlights;
 }
 
-export function filter(data, days) {
-    let result = filterFlights(data, days)
-    // result = filterByCountry(result, countries);
-    // result = filterByAirport(result, airports);
-    result = getLocationData(result);
-
-    return result;
-}
-
 export function filterFlights(data, days) {
     const maxDate = getMaxDate(days);
-    for (const [index, flight] of data.entries()) {
-        const flightDate = new Date(flight.departureDateTime);
 
-        if (flightDate > maxDate) {
-            return data.slice(0, index);
+    for (const flightCategory in data) {
+        for (const destination in data[flightCategory]) {
+            for (const [index, flight] of Object.entries(data[flightCategory][destination].data)) {
+                const flightDate = new Date(flight.departureDateTime);
+
+                if (flightDate > maxDate) {
+                    data[flightCategory][destination].data = data[flightCategory][destination].data.slice(0, index);
+
+                    break;
+                }
+            }
         }
     }
+
+    // for (const [index, flight] of data.entries()) {
+    //     const flightDate = new Date(flight.departureDateTime);
+
+    //     if (flightDate > maxDate) {
+    //         return data.slice(0, index);
+    //     }
+    // }
 
     return data;
 }
 
 export function filterByCountry(data, countries) {
-    const flights = data.filter((flight) => {
+    const flights = data.filterFlights((flight) => {
         return countries.includes(easyJetFilter[flight.arrivalCountry]);
     });
 
@@ -143,7 +147,7 @@ export function filterByCountry(data, countries) {
 }
 
 export function filterByAirport(data, airports) {
-    const flights = data.filter((flight) => {
+    const flights = data.filterFlights((flight) => {
         return airports.includes(flight.departureAirport);
     });
 
@@ -151,9 +155,13 @@ export function filterByAirport(data, airports) {
 }
 
 export function getLocationData(data) {
-    for (let flight of data) {
-        flight.depature = locationData[flight.departureAirport];
-        flight.arrival = locationData[flight.arrivalAirport];
+    for (const flightCategory in data) {
+        for (const arrival in data[flightCategory]) {
+            for (const flight of data[flightCategory][arrival].data) {
+                flight.depature = locationData[flight.departureAirport];
+                flight.arrival = locationData[flight.arrivalAirport];
+            }
+        }
     }
 
     return data;
@@ -161,31 +169,37 @@ export function getLocationData(data) {
 
 export function checkCache() {
     return {
-        cache,
-        cache_size: cache.size()
+        cache
     };
 }
 
-export function getLink(data, airline) {
+export function getLink(data) {
     const link_map = {
         easyjet: "https://www.easyjet.com/en/cheap-flights/",
         ryanair: "https://www.ryanair.com/gb/en/cheap-flights/"
     }
 
-    for (let flight of data) {
-        flight.link = link_map[airline] + `${flight.depature.city.toLowerCase()}/${flight.arrival.city.toLowerCase()}`;
+    for (const flightCategory in data) {
+        for (const destination in data[flightCategory]) {
+            for (const flight of data[flightCategory][destination].data) {
+                flight.link = link_map[flight.airline] + `${flight.depature.city.toLowerCase()}/${flight.arrival.city.toLowerCase()}`;
+            }
+        }
     }
 
     return data;
 }
 
 export function getMaxDate(days) {
-    currentDate.setDate(new Date().getDate() + days);
+    let currentDate = new Date();
+    currentDate.setDate(currentDate.getDate() + days);
 
     return currentDate;
 }
 
 export function sortByPriceFlights(data, direction) {
-    if (direction === "ASC") return data.sort((a, b) => a.outboundPrice - b.outboundPrice);
-    else if (direction === "DESC") return data.sort((a, b) => b.outboundPrice - a.outboundPrice);
+    if (direction === "ASC") data.sort((a, b) => a.outboundPrice - b.outboundPrice);
+    else if (direction === "DESC") data.sort((a, b) => b.outboundPrice - a.outboundPrice);
+
+    return data;
 }

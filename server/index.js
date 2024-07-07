@@ -1,11 +1,12 @@
 import express from "express";
 import fetch from "fetch";
 import cors from "cors";
-import { getLink, getEasyjetData } from "./util.js";
-import { getMultipleEasyjet, getFlightData, filterFlights, transformObject, filter, sortByPriceFlights, checkCache } from "./util.js";
+import { getLink } from "./util.js";
+import { getMultipleAirline, getFlightData, filterFlights, transformObject, sortByPriceFlights, checkCache } from "./util.js";
 
 const app = express();
 const port = 3000;
+const { cache } = checkCache();
 
 app.use(express.json());
 
@@ -17,52 +18,59 @@ app.use(
 );
 
 app.post("/getData", async (req, res) => {
-    const { cache } = checkCache();
-    const current_cache = cache.get(req.body.code);
+    const current_cache = cache.get("all");
+    let return_cache = [];
 
-    if (current_cache && current_cache.days >= req.body.days && req.body.airlines.length <= current_cache.airline.length) {
-        req.body.airlines.forEach((airline) => {
-            if (!current_cache.airline.includes(airline)) return;
-        })
+    for (const flightCategory in current_cache) {
+        if (!req.body.cache.hasOwnProperty(flightCategory)) continue;
+
+        if (!current_cache[flightCategory].hasOwnProperty(req.body.code)) continue;
+
+        if (current_cache[flightCategory][req.body.code].days < req.body.cache[flightCategory][req.body.code].days) continue;
+
+        return_cache = [...return_cache, ...current_cache[flightCategory][req.body.code].data]
+
         console.log("in cache");
-        const filtered_flights = filterFlights(current_cache.data, req.body.days);
+    }
 
-        res.send({
-            airline: req.body.airlines,
-            days: req.body.days,
-            code: req.body.code,
-            data: filtered_flights,
-        });
+    if (return_cache.length) {
+        res.send(sortByPriceFlights(return_cache, "ASC"));
 
         return;
     }
 
     console.log("not in cache")
 
-    let combinedData = [];
-    let easyjet_result;
-    let ryanair_result;
-
+    let flight_data = [];
     let flight_results = await getFlightData(req.body.airlines, req.body.airports, req.body.code, req.body.days);
     let flight_results_copy = JSON.parse(JSON.stringify(flight_results));
 
-    const response_object = {
-        airline: req.body.airlines,
-        days: req.body.days,
-        code: req.body.code,
-        data: flight_results,
-    };
+    for (const flightCategory in flight_results_copy) {
+        const existing_cache = current_cache[flightCategory];
+        for (const destination in flight_results_copy[flightCategory]) {
+            flight_data = [...flight_data, ...flight_results_copy[flightCategory][destination].data];
 
-    cache.put(req.body.code, response_object);
+            if (!existing_cache.hasOwnProperty(destination) || existing_cache[destination].days < req.body.days) {
+                existing_cache[destination] = {
+                    data: flight_data,
+                    days: req.body.days
+                }
 
-    res.send({
-        airline: req.body.airlines,
-        days: req.body.days,
-        code: req.body.code,
-        data: sortByPriceFlights(flight_results_copy, "ASC"),
-    });
+                cache.put(flightCategory, existing_cache);
+            }
+        }
+    }
+
+    res.send(sortByPriceFlights(flight_data, "ASC"));
 })
 
 app.listen(port, () => {
+    cache.put("all", {
+        "easyjetBRS": {},
+        "easyjetNQY": {},
+        "ryanairBRS": {},
+        "ryanairNQY": {}
+    });
+
     console.log(`airline-airline - listening on port ${port}`);
 });

@@ -46,7 +46,7 @@ const airlineStates = ref({
 
 const airportStates = ref({
     bristol: true,
-    newquay: true,
+    newquay: false,
 });
 
 const cityStates = ref({
@@ -71,8 +71,9 @@ watch(airlineCount, (newValue, oldValue) => {
         console.log("airline removed");
     } else {
         console.log("airline added");
-        checks();
     }
+
+    checks();
 }, {
     deep: true
 });
@@ -82,8 +83,9 @@ watch(airportCount, (newValue, oldValue) => {
         console.log("airport removed");
     } else {
         console.log("airport added");
-        checks();
     }
+
+    checks();
 }, {
     deep: true
 });
@@ -93,8 +95,9 @@ watch(cityCount, (newValue, oldValue) => {
         console.log("city removed");
     } else {
         console.log("city added");
-        checks();
     }
+
+    checks();
 }, {
     deep: true
 });
@@ -151,12 +154,34 @@ async function updateDays(data) {
 }
 
 async function getData() {
+    const days_out = days.value;
+    const airlines = getAirlines();
+    const code = cityToCode[currentCity.value].code;
+    const airports = getAirport();
+    let coreKey = "";
+    let request_body = {};
+
+    for (const airline of airlines) {
+        for (const airport of airports) {
+            coreKey = airline + airport;
+            
+            request_body[coreKey] = {
+                [code]: {
+                    days: days_out,
+                }
+            };
+        }
+    }
+
     const data = {
         days: days.value,
         airlines: getAirlines(),
         code: cityToCode[currentCity.value].code,
         airports: getAirport(),
+        cache: request_body
     };
+
+    console.log(data);
 
     const request = {
         method: "POST",
@@ -169,12 +194,14 @@ async function getData() {
     const response = await callApi(data, request);
 
     if (response.ok) {
-        const data = await response.json();
+        let data = await response.json();
         flights.value = data;
-    } else {
-        console.log(response);
-        console.log("ERROR");
-    }
+        console.log(flights.value);
+        return;
+    } 
+    console.log(response);
+    console.log("ERROR");
+    
 }
 
 async function callApi(data, request) {
@@ -192,13 +219,6 @@ async function checks() {
 async function updateAirlineState(data) {
     airlineStates.value[data.key] = data.value;
     airline.value = data.value;
-
-
-    await checks();
-}
-
-async function updateAirportState() {
-    await checks();
 }
 
 function checkStates() {
@@ -229,13 +249,11 @@ function clickButton(city) {
     currentCity.value = city;
     const oppositeValue = !cityStates.value[city];
     cityStates.value[city] = oppositeValue;
-    checks();
 }
 
 function clickAirportButton(airport) {
     const oppositeValue = !airportStates.value[airport];
     airportStates.value[airport] = oppositeValue;
-    updateAirportState();
 }
 
 function sortData(data) {
@@ -247,8 +265,8 @@ function sortData(data) {
 function paginate(resultCount) {
     const pagedData = [];   
 
-    for (let i = 0; i < flights.value?.data?.length; i += resultCount) {
-        pagedData.push(flights.value.data.slice(i, i + resultCount));
+    for (let i = 0; i < flights.value.length; i += resultCount) {
+        pagedData.push(flights.value.slice(i, i + resultCount));
     }
 
     pageCount.value = pagedData.length > 0 ? pagedData.length - 1 : 0;
