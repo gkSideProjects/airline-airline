@@ -19,49 +19,34 @@ app.use(
 
 app.post("/getData", async (req, res) => {
     const current_cache = cache.get("all");
-    let return_cache = [];
 
-    for (const flightCategory in current_cache) {
-        if (!req.body.cache.hasOwnProperty(flightCategory)) continue;
+    for (const flightCategory in req.body.cache) {
+        for (const destination in req.body.cache[flightCategory]) {
+            if (current_cache[flightCategory].hasOwnProperty(req.body.code) && current_cache[flightCategory][req.body.code].days >= req.body.cache[flightCategory][req.body.code].days) {
+                const filtered_data = filterFlights(current_cache[flightCategory][req.body.code].data, req.body.days, true);
+                let flight_data_copy = JSON.parse(JSON.stringify(filtered_data));
+                res.send(sortByPriceFlights(flight_data_copy, "ASC"));
+                console.log("in cache");
 
-        if (!current_cache[flightCategory].hasOwnProperty(req.body.code)) continue;
-
-        if (current_cache[flightCategory][req.body.code].days < req.body.cache[flightCategory][req.body.code].days) continue;
-
-        return_cache = [...return_cache, ...current_cache[flightCategory][req.body.code].data]
-
-        console.log("in cache");
-    }
-
-    if (return_cache.length) {
-        res.send(sortByPriceFlights(return_cache, "ASC"));
-
-        return;
-    }
-
-    console.log("not in cache")
-
-    let flight_data = [];
-    let flight_results = await getFlightData(req.body.airlines, req.body.airports, req.body.code, req.body.days);
-    let flight_results_copy = JSON.parse(JSON.stringify(flight_results));
-
-    for (const flightCategory in flight_results_copy) {
-        const existing_cache = current_cache[flightCategory];
-        for (const destination in flight_results_copy[flightCategory]) {
-            flight_data = [...flight_data, ...flight_results_copy[flightCategory][destination].data];
-
-            if (!existing_cache.hasOwnProperty(destination) || existing_cache[destination].days < req.body.days) {
-                existing_cache[destination] = {
-                    data: flight_data,
-                    days: req.body.days
-                }
-
-                cache.put(flightCategory, existing_cache);
+                return;
             }
+
+            console.log("not in cache");
+
+            let flight_results = await getFlightData(req.body.airlines, req.body.airports, req.body.code, req.body.days);
+            let flight_results_copy = JSON.parse(JSON.stringify(flight_results));
+
+            current_cache[flightCategory][destination] = {
+                data: flight_results[flightCategory][destination].data,
+                days: req.body.days
+            }
+
+            cache.put("all", current_cache);
+            res.send(sortByPriceFlights(flight_results_copy[flightCategory][destination].data, "ASC"));
+
+            return;
         }
     }
-
-    res.send(sortByPriceFlights(flight_data, "ASC"));
 })
 
 app.listen(port, () => {

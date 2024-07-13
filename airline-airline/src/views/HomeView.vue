@@ -181,8 +181,6 @@ async function getData() {
         cache: request_body
     };
 
-    console.log(data);
-
     const request = {
         method: "POST",
         headers: {
@@ -196,12 +194,9 @@ async function getData() {
     if (response.ok) {
         let data = await response.json();
         flights.value = data;
-        console.log(flights.value);
+        
         return;
-    } 
-    console.log(response);
-    console.log("ERROR");
-    
+    }     
 }
 
 async function callApi(data, request) {

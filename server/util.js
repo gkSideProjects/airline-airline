@@ -110,8 +110,18 @@ export function transformObject(flights) {
     return newFlights;
 }
 
-export function filterFlights(data, days) {
+export function filterFlights(data, days, raw = false) {
     const maxDate = getMaxDate(days);
+
+    if (raw) {
+        for (const [index, flight] of data.entries()) {
+            const flightDate = new Date(flight.departureDateTime);
+
+            if (flightDate > maxDate) return data.slice(0, index);
+        }
+
+        return data;
+    }
 
     for (const flightCategory in data) {
         for (const destination in data[flightCategory]) {
@@ -200,6 +210,13 @@ export function getMaxDate(days) {
 export function sortByPriceFlights(data, direction) {
     if (direction === "ASC") data.sort((a, b) => a.outboundPrice - b.outboundPrice);
     else if (direction === "DESC") data.sort((a, b) => b.outboundPrice - a.outboundPrice);
+
+    return data;
+}
+
+export function sortByDate(data, direction) {
+    if (direction === "ASC") data.sort((a, b) => a.departureDateTime - b.departureDateTime);
+    else if (direction === "DESC") data.sort((a, b) => b.departureDateTime - a.departureDateTime);
 
     return data;
 }
